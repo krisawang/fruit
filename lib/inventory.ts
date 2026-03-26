@@ -1,4 +1,4 @@
-﻿import { InventoryStatus, Prisma } from "@prisma/client";
+import { InventoryStatus, Prisma } from "@prisma/client";
 
 export const EXPIRING_SOON_DAYS = 7;
 
@@ -8,6 +8,27 @@ const packageTypeLabels = {
 } as const;
 
 type PackageTypeValue = keyof typeof packageTypeLabels;
+
+function normalizeImagePath(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("/")) {
+    return trimmed;
+  }
+
+  return `/${trimmed.replace(/^\.?\/+/, "")}`;
+}
 
 export function startOfToday() {
   const date = new Date();
@@ -56,7 +77,10 @@ function toDetailImages(value: Prisma.JsonValue | null | undefined) {
     return [];
   }
 
-  return value.filter((item): item is string => typeof item === "string");
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => normalizeImagePath(item))
+    .filter((item): item is string => Boolean(item));
 }
 
 export function computeInventoryStatus(params: {
@@ -126,7 +150,7 @@ export function serializeFruitItem(item: {
     variety: item.variety ?? null,
     storageTemp: item.storageTemp ?? null,
     foodLicense: item.foodLicense ?? null,
-    mainImage: item.mainImage ?? null,
+    mainImage: normalizeImagePath(item.mainImage),
     detailImages: toDetailImages(item.detailImages),
     detailContent: item.detailContent ?? null,
     unitSpec: item.unitSpec ?? null,
