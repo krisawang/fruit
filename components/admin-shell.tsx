@@ -28,39 +28,20 @@ export async function AdminShell({
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Fruit System</p>
             <Link href="/" className="mt-2 block text-xl font-semibold text-slate-900">
-              ˮ���ֿ��̨
+              {"\u6c34\u679c\u4ed3\u5e93\u540e\u53f0"}
             </Link>
           </div>
           <nav className="flex flex-col gap-1">
-            <Link
-              href="/"
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition",
-                currentPath === "/" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              )}
-            >
-              ��ҳ���
+            <Link href="/" className={cn("rounded-lg px-3 py-2 text-sm font-medium transition", currentPath === "/" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")}>
+              {"\u9996\u9875\u5165\u53e3"}
             </Link>
             {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition",
-                  currentPath === item.href ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                )}
-              >
+              <Link key={item.href} href={item.href} className={cn("rounded-lg px-3 py-2 text-sm font-medium transition", currentPath === item.href ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")}>
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/account"
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition",
-                currentPath === "/account" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              )}
-            >
-              �˻�����
+            <Link href="/account" className={cn("rounded-lg px-3 py-2 text-sm font-medium transition", currentPath === "/account" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")}>
+              {"\u8d26\u6237\u8bbe\u7f6e"}
             </Link>
           </nav>
         </aside>
@@ -73,7 +54,7 @@ export async function AdminShell({
             <div className="flex flex-wrap items-center gap-3">
               {actions}
               <Link href="/account" className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100">
-                {currentUser.displayName} �� {currentUser.userTypeLabel}
+                {`${currentUser.displayName} · ${currentUser.userTypeLabel}`}
               </Link>
               <LogoutButton />
             </div>

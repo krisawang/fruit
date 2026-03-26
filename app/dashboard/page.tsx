@@ -29,7 +29,7 @@ export default async function DashboardPage() {
                   {inboundRecords.map((record) => (
                     <li key={record.id} className="rounded-xl bg-slate-50 px-4 py-3">
                       <div className="font-medium text-slate-900">{record.fruitName}</div>
-                      <div>{`${record.quantity} ${record.unit} �� ${record.date}`}</div>
+                      <div>{`${record.quantity} ${record.unit} · ${record.date}`}</div>
                     </li>
                   ))}
                 </ul>
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
                   {lossRecords.map((record) => (
                     <li key={record.id} className="rounded-xl bg-rose-50 px-4 py-3">
                       <div className="font-medium text-slate-900">{record.fruitName}</div>
-                      <div>{`${record.quantity} ${record.unit} �� ${record.note}`}</div>
+                      <div>{`${record.quantity} ${record.unit} · ${record.note}`}</div>
                     </li>
                   ))}
                 </ul>

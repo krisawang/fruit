@@ -17,20 +17,14 @@ export async function POST(request: Request) {
     }
 
     if (!verifyPassword(currentPassword, user.passwordHash)) {
-      throw new ApiError(400, "��ǰ���벻��ȷ");
+      throw new ApiError(400, "\u5f53\u524d\u5bc6\u7801\u4e0d\u6b63\u786e");
     }
 
     if (currentPassword === nextPassword) {
-      throw new ApiError(400, "�����벻���뵱ǰ������ͬ");
+      throw new ApiError(400, "\u65b0\u5bc6\u7801\u4e0d\u80fd\u4e0e\u5f53\u524d\u5bc6\u7801\u76f8\u540c");
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash: hashPassword(nextPassword)
-      }
-    });
-
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(nextPassword) } });
     return ok({ changed: true });
   } catch (error) {
     return fail(error);

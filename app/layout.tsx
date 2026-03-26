@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Fruit System",
-  description: "ˮ���ֿ����ϵͳ"
+  description: "\u6c34\u679c\u4ed3\u5e93\u7ba1\u7406\u7cfb\u7edf"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -9,7 +9,7 @@ export function isAdminRole(role: UserRole | string) {
 }
 
 export function getUserTypeLabel(role: UserRole | string) {
-  return isAdminRole(role) ? "����Ա" : "��Ա";
+  return isAdminRole(role) ? "\u7ba1\u7406\u5458" : "\u6210\u5458";
 }
 
 export function normalizePermissions(input: Prisma.JsonValue | null | undefined, role: UserRole | string): PermissionMap {

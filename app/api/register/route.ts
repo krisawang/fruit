@@ -14,14 +14,9 @@ export async function POST(request: Request) {
     const phone = assertPhone(body.phone, "phone");
     const password = assertPassword(body.password, "password");
 
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { phone }]
-      }
-    });
-
+    const existing = await prisma.user.findFirst({ where: { OR: [{ username }, { phone }] } });
     if (existing) {
-      throw new ApiError(409, existing.username === username ? "�û����Ѵ���" : "�ֻ�����ע��");
+      throw new ApiError(409, existing.username === username ? "\u7528\u6237\u540d\u5df2\u5b58\u5728" : "\u624b\u673a\u53f7\u5df2\u6ce8\u518c");
     }
 
     const user = await prisma.user.create({
@@ -38,12 +33,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     cookieStore.set({
       name: sessionCookieName,
-      value: createSessionValue({
-        userId: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role
-      }),
+      value: createSessionValue({ userId: user.id, username: user.username, displayName: user.displayName, role: user.role }),
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -51,13 +41,7 @@ export async function POST(request: Request) {
       path: "/"
     });
 
-    return ok({
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      phone: user.phone,
-      role: user.role
-    }, { status: 201 });
+    return ok({ id: user.id, username: user.username, displayName: user.displayName, phone: user.phone, role: user.role }, { status: 201 });
   } catch (error) {
     return fail(error);
   }
