@@ -1,0 +1,112 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CLERK
+}
+
+enum MovementType {
+  INBOUND
+  OUTBOUND
+}
+
+enum InventoryStatus {
+  FRESH
+  NORMAL
+  LOW_STOCK
+  EXPIRING
+  OUT_OF_STOCK
+}
+
+enum PackageType {
+  BULK
+  PACKAGED
+}
+
+model User {
+  id             String          @id @default(cuid())
+  username       String          @unique
+  displayName    String
+  passwordHash   String
+  role           UserRole        @default(CLERK)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  stockMovements StockMovement[]
+  lossRecords    LossRecord[]
+}
+
+model FruitItem {
+  id                String          @id @default(cuid())
+  name              String
+  brand             String?
+  category          String
+  batchNo           String          @unique
+  origin            String
+  packageType       PackageType     @default(BULK)
+  variety           String?
+  storageTemp       String?
+  foodLicense       String?
+  mainImage         String?
+  detailImages      Json?
+  detailContent     String?
+  quantity          Decimal         @default(0) @db.Decimal(12, 2)
+  unit              String
+  unitSpec          String?
+  netWeight         Decimal?        @db.Decimal(12, 2)
+  price             Decimal?        @db.Decimal(12, 2)
+  warehouseLocation String
+  inboundDate       DateTime
+  expiryDate        DateTime
+  lowStockThreshold Decimal         @default(100) @db.Decimal(12, 2)
+  status            InventoryStatus @default(NORMAL)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  stockMovements    StockMovement[]
+  lossRecords       LossRecord[]
+
+  @@index([name])
+  @@index([category])
+  @@index([expiryDate])
+  @@index([status])
+}
+
+model StockMovement {
+  id          String       @id @default(cuid())
+  fruitItemId String
+  userId      String
+  type        MovementType
+  quantity    Decimal      @db.Decimal(12, 2)
+  note        String?
+  occurredAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  fruitItem   FruitItem    @relation(fields: [fruitItemId], references: [id], onDelete: Restrict)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([fruitItemId, occurredAt])
+  @@index([type, occurredAt])
+}
+
+model LossRecord {
+  id          String    @id @default(cuid())
+  fruitItemId String
+  userId      String
+  quantity    Decimal   @db.Decimal(12, 2)
+  reason      String
+  note        String?
+  occurredAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  fruitItem   FruitItem @relation(fields: [fruitItemId], references: [id], onDelete: Restrict)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([fruitItemId, occurredAt])
+  @@index([occurredAt])
+}
+
