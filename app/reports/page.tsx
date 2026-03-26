@@ -1,20 +1,21 @@
-import { AdminShell, SectionCard, StatCard } from "@/components/admin-shell";
+import { AdminShell } from "@/components/admin-shell";
+import { SectionCard, StatCard } from "@/components/ui-shell";
 import { dashboardStats, reportRows } from "@/lib/mock-data";
 import { requirePageUser } from "@/lib/session";
 
 export default async function ReportsPage() {
-  await requirePageUser();
+  await requirePageUser("reports");
 
   return (
-    <AdminShell title="报表中心" description="查看库存、损耗和周转相关指标。" currentPath="/reports">
+    <AdminShell title="Reports" description="View inventory, loss, and turnover indicators." currentPath="/reports">
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="库存总量" value={`${dashboardStats.totalInventory.toLocaleString()} kg`} hint="当前账面库存" />
-          <StatCard label="临期总量" value={`${dashboardStats.expiringSoon.toLocaleString()} kg`} hint="建议优先出库" />
-          <StatCard label="低库存项" value={`${dashboardStats.lowStock}`} hint="需触发补货" />
-          <StatCard label="当日损耗" value={`${dashboardStats.todayLoss} kg`} hint="用于追踪损耗率" />
+          <StatCard label="Inventory Total" value={`${dashboardStats.totalInventory.toLocaleString()} kg`} hint="Current on-hand inventory" />
+          <StatCard label="Expiring Soon" value={`${dashboardStats.expiringSoon.toLocaleString()} kg`} hint="Prioritize outbound handling" />
+          <StatCard label="Low Stock Items" value={`${dashboardStats.lowStock}`} hint="Needs replenishment" />
+          <StatCard label="Today Loss" value={`${dashboardStats.todayLoss} kg`} hint="Used to track shrinkage" />
         </div>
-        <SectionCard title="经营指标">
+        <SectionCard title="Operating Metrics">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {reportRows.map((row) => (
               <div key={row.label} className="rounded-2xl bg-slate-50 p-5">

@@ -1,56 +1,46 @@
-import { AdminShell, DataTable, SectionCard, StatCard } from "@/components/admin-shell";
+import { AdminShell } from "@/components/admin-shell";
+import { DataTable, SectionCard, StatCard } from "@/components/ui-shell";
 import { dashboardStats, inboundRecords, inventoryItems, lossRecords } from "@/lib/mock-data";
 import { requirePageUser } from "@/lib/session";
 
 export default async function DashboardPage() {
-  await requirePageUser();
+  await requirePageUser("dashboard");
 
   return (
-    <AdminShell title="仪表盘" description="查看库存总览、出入库动态和异常预警。" currentPath="/dashboard">
+    <AdminShell title="\u4eea\u8868\u76d8" description="\u67e5\u770b\u5e93\u5b58\u603b\u89c8\u3001\u51fa\u5165\u5e93\u52a8\u6001\u548c\u5f02\u5e38\u9884\u8b66\u3002" currentPath="/dashboard">
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <StatCard label="当前库存总量" value={`${dashboardStats.totalInventory.toLocaleString()} kg`} hint="全部在库水果折算重量" />
-          <StatCard label="今日入库" value={`${dashboardStats.todayInbound.toLocaleString()} kg`} hint="今日已完成入库" />
-          <StatCard label="今日出库" value={`${dashboardStats.todayOutbound.toLocaleString()} kg`} hint="今日已完成出库" />
-          <StatCard label="即将过期数量" value={`${dashboardStats.expiringSoon.toLocaleString()} kg`} hint="7 日内到期批次" />
-          <StatCard label="低库存预警数量" value={`${dashboardStats.lowStock} 项`} hint="需补货或调拨" />
-          <StatCard label="今日损耗数量" value={`${dashboardStats.todayLoss} kg`} hint="已登记损耗" />
+          <StatCard label="\u5f53\u524d\u5e93\u5b58\u603b\u91cf" value={`${dashboardStats.totalInventory.toLocaleString()} kg`} hint="\u5168\u90e8\u5728\u5e93\u6c34\u679c\u6298\u7b97\u91cd\u91cf" />
+          <StatCard label="\u4eca\u65e5\u5165\u5e93" value={`${dashboardStats.todayInbound.toLocaleString()} kg`} hint="\u4eca\u65e5\u5df2\u5b8c\u6210\u5165\u5e93\u91cf" />
+          <StatCard label="\u4eca\u65e5\u51fa\u5e93" value={`${dashboardStats.todayOutbound.toLocaleString()} kg`} hint="\u4eca\u65e5\u5df2\u5b8c\u6210\u51fa\u5e93\u91cf" />
+          <StatCard label="\u5373\u5c06\u8fc7\u671f\u6570\u91cf" value={`${dashboardStats.expiringSoon.toLocaleString()} kg`} hint="7 \u65e5\u5185\u5230\u671f\u6279\u6b21" />
+          <StatCard label="\u4f4e\u5e93\u5b58\u9884\u8b66" value={`${dashboardStats.lowStock} \u9879`} hint="\u9700\u8981\u8865\u8d27\u6216\u8c03\u6574" />
+          <StatCard label="\u4eca\u65e5\u635f\u8017\u6570\u91cf" value={`${dashboardStats.todayLoss} kg`} hint="\u5df2\u767b\u8bb0\u635f\u8017" />
         </div>
         <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-          <SectionCard title="库存状态概览">
-            <DataTable
-              columns={["水果", "分类", "批次", "库存", "库位", "保质期", "状态"]}
-              rows={inventoryItems.slice(0, 5).map((item) => [
-                item.name,
-                item.category,
-                item.batchNo,
-                `${item.quantity} ${item.unit}`,
-                item.warehouseLocation,
-                item.expiryDate,
-                item.status
-              ])}
-            />
+          <SectionCard title="\u5e93\u5b58\u72b6\u6001\u6982\u89c8">
+            <DataTable columns={["\u6c34\u679c", "\u5206\u7c7b", "\u6279\u6b21", "\u5e93\u5b58", "\u4ed3\u4f4d", "\u4fdd\u8d28\u671f", "\u72b6\u6001"]} rows={inventoryItems.slice(0, 5).map((item) => [item.name, item.category, item.batchNo, `${item.quantity} ${item.unit}`, item.warehouseLocation, item.expiryDate, item.status])} />
           </SectionCard>
-          <SectionCard title="今日动态">
+          <SectionCard title="\u4eca\u65e5\u52a8\u6001">
             <div className="space-y-5">
               <div>
-                <p className="mb-3 text-sm font-medium text-slate-700">最新入库</p>
+                <p className="mb-3 text-sm font-medium text-slate-700">\u6700\u65b0\u5165\u5e93</p>
                 <ul className="space-y-3 text-sm text-slate-600">
                   {inboundRecords.map((record) => (
                     <li key={record.id} className="rounded-xl bg-slate-50 px-4 py-3">
                       <div className="font-medium text-slate-900">{record.fruitName}</div>
-                      <div>{`${record.quantity} ${record.unit} · ${record.date}`}</div>
+                      <div>{`${record.quantity} ${record.unit} �� ${record.date}`}</div>
                     </li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="mb-3 text-sm font-medium text-slate-700">今日损耗</p>
+                <p className="mb-3 text-sm font-medium text-slate-700">\u4eca\u65e5\u635f\u8017</p>
                 <ul className="space-y-3 text-sm text-slate-600">
                   {lossRecords.map((record) => (
                     <li key={record.id} className="rounded-xl bg-rose-50 px-4 py-3">
                       <div className="font-medium text-slate-900">{record.fruitName}</div>
-                      <div>{`${record.quantity} ${record.unit} · ${record.note}`}</div>
+                      <div>{`${record.quantity} ${record.unit} �� ${record.note}`}</div>
                     </li>
                   ))}
                 </ul>

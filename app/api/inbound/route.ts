@@ -1,8 +1,8 @@
-﻿import { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { computeInventoryStatus, serializeFruitItem, toNumber } from "@/lib/inventory";
-import { getSessionUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 import {
   ApiError,
   assertDate,
@@ -19,11 +19,7 @@ const packageTypeValues = ["BULK", "PACKAGED"] as const;
 
 export async function POST(request: Request) {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
-
+    const session = await requireApiUser("inbound");
     const body = await request.json();
     const hasField = (field: string) => Object.prototype.hasOwnProperty.call(body, field);
 
@@ -128,7 +124,7 @@ export async function POST(request: Request) {
       await tx.stockMovement.create({
         data: {
           fruitItemId: fruitItem.id,
-          userId: session.userId,
+          userId: session.id,
           type: "INBOUND",
           quantity,
           note,
@@ -144,4 +140,3 @@ export async function POST(request: Request) {
     return fail(error);
   }
 }
-

@@ -1,16 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { computeInventoryStatus, serializeFruitItem, toNumber } from "@/lib/inventory";
-import { getSessionUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 import { ApiError, assertOptionalDate, assertOptionalString, assertPositiveNumber, assertString } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
-
+    const session = await requireApiUser("outbound");
     const body = await request.json();
     const batchNo = assertString(body.batchNo, "batchNo");
     const quantity = assertPositiveNumber(body.quantity, "quantity");
@@ -47,7 +43,7 @@ export async function POST(request: Request) {
       await tx.stockMovement.create({
         data: {
           fruitItemId: fruitItem.id,
-          userId: session.userId,
+          userId: session.id,
           type: "OUTBOUND",
           quantity,
           note,

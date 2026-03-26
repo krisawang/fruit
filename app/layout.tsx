@@ -1,16 +1,12 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fruit Warehouse MVP",
-  description: "Fruit warehouse management dashboard"
+  title: "Fruit System",
+  description: "ˮ���ֿ����ϵͳ"
 };
 
-export default function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
       <body>{children}</body>

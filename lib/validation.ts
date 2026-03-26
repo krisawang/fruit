@@ -1,4 +1,4 @@
-﻿export class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
 
   constructor(status: number, message: string) {
@@ -24,7 +24,24 @@ export function assertOptionalString(value: unknown) {
     throw new ApiError(400, "Invalid string value");
   }
 
-  return value.trim();
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+export function assertPassword(value: unknown, field = "password") {
+  const password = assertString(value, field);
+  if (password.length < 6) {
+    throw new ApiError(400, `${field} must be at least 6 characters`);
+  }
+  return password;
+}
+
+export function assertPhone(value: unknown, field = "phone") {
+  const phone = assertString(value, field).replace(/\s+/g, "").replace(/-/g, "");
+  if (!/^1\d{10}$/.test(phone)) {
+    throw new ApiError(400, `${field} must be a valid mobile number`);
+  }
+  return phone;
 }
 
 export function assertPositiveNumber(value: unknown, field: string) {
@@ -85,7 +102,7 @@ export function assertOptionalStringArray(value: unknown, field: string) {
     throw new ApiError(400, `${field} must be an array of strings`);
   }
 
-  return value.map((item) => item.trim());
+  return value.map((item) => item.trim()).filter(Boolean);
 }
 
 export function assertDate(value: unknown, field: string) {
@@ -117,4 +134,3 @@ export function assertOptionalDate(value: unknown) {
 
   return parsed;
 }
-

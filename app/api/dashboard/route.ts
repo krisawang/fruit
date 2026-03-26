@@ -2,17 +2,13 @@ import { InventoryStatus, MovementType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { addDays, endOfToday, startOfToday, toNumber } from "@/lib/inventory";
-import { getSessionUser } from "@/lib/session";
-import { ApiError } from "@/lib/validation";
+import { requireApiUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
+    await requireApiUser("dashboard");
 
     const todayStart = startOfToday();
     const todayEnd = endOfToday();

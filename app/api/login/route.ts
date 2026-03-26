@@ -1,23 +1,32 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
+import { defaultMemberPermissions, normalizePhone } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSessionValue, sessionCookieName, sessionMaxAge } from "@/lib/session";
-import { assertString, ApiError } from "@/lib/validation";
+import { assertPassword, assertString, ApiError } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const username = assertString(body.username, "username");
-    const password = assertString(body.password, "password");
+    const identifier = assertString(body.identifier ?? body.username, "identifier");
+    const password = assertPassword(body.password, "password");
 
-    let user = await prisma.user.findUnique({ where: { username } });
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ username: identifier }, { phone: normalizePhone(identifier) }]
+      }
+    });
 
-    if (!user && username === (process.env.SEED_ADMIN_USERNAME || "admin")) {
+    const seedUsername = process.env.SEED_ADMIN_USERNAME || "admin";
+    const seedPhone = process.env.SEED_ADMIN_PHONE ? normalizePhone(process.env.SEED_ADMIN_PHONE) : null;
+
+    if (!user && (identifier === seedUsername || normalizePhone(identifier) === seedPhone)) {
       user = await prisma.user.create({
         data: {
-          username,
-          displayName: process.env.SEED_ADMIN_DISPLAY_NAME || "仓库管理员",
+          username: seedUsername,
+          phone: seedPhone,
+          displayName: process.env.SEED_ADMIN_DISPLAY_NAME || "�ֿ����Ա",
           passwordHash: hashPassword(process.env.SEED_ADMIN_PASSWORD || "admin123456"),
           role: "ADMIN"
         }
@@ -25,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      throw new ApiError(401, "Invalid username or password");
+      throw new ApiError(401, "�˺Ż��������");
     }
 
     const cookieStore = await cookies();
@@ -48,7 +57,9 @@ export async function POST(request: Request) {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      role: user.role
+      phone: user.phone,
+      role: user.role,
+      permissions: user.role === "ADMIN" ? undefined : user.permissions ?? defaultMemberPermissions
     });
   } catch (error) {
     return fail(error);

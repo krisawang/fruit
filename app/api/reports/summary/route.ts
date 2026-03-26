@@ -2,17 +2,13 @@ import { MovementType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { addDays, serializeFruitItem, toNumber } from "@/lib/inventory";
-import { getSessionUser } from "@/lib/session";
-import { ApiError } from "@/lib/validation";
+import { requireApiUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
+    await requireApiUser("reports");
 
     const { searchParams } = new URL(request.url);
     const periodDays = Math.max(1, Number(searchParams.get("periodDays") || "30"));

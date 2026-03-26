@@ -1,8 +1,8 @@
-﻿import { InventoryStatus, Prisma } from "@prisma/client";
+import { InventoryStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { addDays, computeInventoryStatus, serializeFruitItem } from "@/lib/inventory";
-import { getSessionUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 import {
   ApiError,
   assertDate,
@@ -20,10 +20,7 @@ const packageTypeValues = ["BULK", "PACKAGED"] as const;
 
 export async function GET(request: Request) {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
+    await requireApiUser("inventory");
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim();
@@ -71,10 +68,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getSessionUser();
-    if (!session) {
-      throw new ApiError(401, "Unauthorized");
-    }
+    await requireApiUser("inventory");
 
     const body = await request.json();
     const id = assertString(body.id, "id");
@@ -149,4 +143,3 @@ export async function PATCH(request: Request) {
     return fail(error);
   }
 }
-
