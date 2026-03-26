@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,6 +7,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123456");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +43,7 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("登录请求失败，请稍后再试");
+      setError("登录请求失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -59,11 +60,31 @@ export default function LoginPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">账号</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none placeholder:text-slate-400 focus:border-brand" placeholder="admin" />
+            <input
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none placeholder:text-slate-400 focus:border-brand"
+              placeholder="admin"
+            />
           </label>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">密码</span>
-            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none placeholder:text-slate-400 focus:border-brand" placeholder="••••••••" />
+            <div className="flex overflow-hidden rounded-xl border border-slate-200 focus-within:border-brand">
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? "text" : "password"}
+                className="w-full border-0 px-4 py-3 outline-none placeholder:text-slate-400"
+                placeholder="请输入密码"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="border-l border-slate-200 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                {showPassword ? "隐藏" : "显示"}
+              </button>
+            </div>
           </label>
           {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
           <button disabled={loading} className="block w-full rounded-xl bg-brand px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-slate-400">
