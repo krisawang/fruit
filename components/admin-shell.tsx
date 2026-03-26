@@ -33,7 +33,7 @@ export async function AdminShell({
           </div>
           <nav className="flex flex-col gap-1">
             <Link href="/" className={cn("rounded-lg px-3 py-2 text-sm font-medium transition", currentPath === "/" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")}>
-              {"\u9996\u9875\u5165\u53e3"}
+              {"\u9996\u9875\u5c55\u793a"}
             </Link>
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className={cn("rounded-lg px-3 py-2 text-sm font-medium transition", currentPath === item.href ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")}>
@@ -54,7 +54,7 @@ export async function AdminShell({
             <div className="flex flex-wrap items-center gap-3">
               {actions}
               <Link href="/account" className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100">
-                {`${currentUser.displayName} · ${currentUser.userTypeLabel}`}
+                {`${currentUser.displayName} / ${currentUser.userTypeLabel}`}
               </Link>
               <LogoutButton />
             </div>

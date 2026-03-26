@@ -3,8 +3,8 @@ import { InventoryStatus, Prisma } from "@prisma/client";
 export const EXPIRING_SOON_DAYS = 7;
 
 const packageTypeLabels = {
-  BULK: "散装",
-  PACKAGED: "包装"
+  BULK: "\u6563\u88c5",
+  PACKAGED: "\u5305\u88c5"
 } as const;
 
 type PackageTypeValue = keyof typeof packageTypeLabels;
@@ -28,14 +28,14 @@ function normalizeImagePath(value: string | null | undefined) {
   }
 
   if (trimmed.startsWith("/uploads/")) {
-    return `/api${trimmed}`;
+    return trimmed;
   }
 
   if (trimmed.startsWith("/")) {
     return trimmed;
   }
 
-  return `/api/uploads/${trimmed.replace(/^\.?\/+/, "")}`;
+  return `/uploads/${trimmed.replace(/^\.?\/+/, "")}`;
 }
 
 function toStringArray(value: Prisma.JsonValue | null | undefined) {
