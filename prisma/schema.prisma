@@ -57,8 +57,10 @@ model FruitItem {
   storageTemp       String?
   foodLicense       String?
   mainImage         String?
+  mainImages        Json?
   detailImages      Json?
   detailContent     String?
+  showOnHome        Boolean         @default(false)
   quantity          Decimal         @default(0) @db.Decimal(12, 2)
   unit              String
   unitSpec          String?
@@ -78,6 +80,7 @@ model FruitItem {
   @@index([category])
   @@index([expiryDate])
   @@index([status])
+  @@index([showOnHome])
 }
 
 model StockMovement {

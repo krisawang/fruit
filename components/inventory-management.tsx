@@ -16,6 +16,7 @@ type InventoryItem = {
   storageTemp: string | null;
   foodLicense: string | null;
   mainImage: string | null;
+  mainImages: string[];
   detailImages: string[];
   detailContent: string | null;
   quantity: number;
@@ -28,6 +29,7 @@ type InventoryItem = {
   expiryDate: string;
   lowStockThreshold: number;
   status: string;
+  showOnHome: boolean;
 };
 
 type ApiResponse<T> = {
@@ -52,6 +54,7 @@ type FormState = {
   storageTemp: string;
   foodLicense: string;
   mainImage: string;
+  mainImages: string[];
   detailImages: string[];
   detailContent: string;
   unit: string;
@@ -63,6 +66,7 @@ type FormState = {
   inboundDate: string;
   expiryDate: string;
   lowStockThreshold: string;
+  showOnHome: boolean;
 };
 
 const currencyFormatter = new Intl.NumberFormat("zh-CN", {
@@ -89,8 +93,10 @@ function resolveImageUrl(value: string | null | undefined) {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("/api/uploads/")) return trimmed;
+  if (trimmed.startsWith("/uploads/")) return `/api${trimmed}`;
   if (trimmed.startsWith("/")) return trimmed;
-  return `/${trimmed.replace(/^\.?\/+/, "")}`;
+  return `/api/uploads/${trimmed.replace(/^\.?\/+/, "")}`;
 }
 
 function createInitialFormState(): FormState {
@@ -106,6 +112,7 @@ function createInitialFormState(): FormState {
     storageTemp: "",
     foodLicense: "",
     mainImage: "",
+    mainImages: [],
     detailImages: [],
     detailContent: "",
     unit: "kg",
@@ -116,7 +123,8 @@ function createInitialFormState(): FormState {
     warehouseLocation: "",
     inboundDate: formatDateInput(today),
     expiryDate: formatDateInput(addDays(today, 7)),
-    lowStockThreshold: "100"
+    lowStockThreshold: "100",
+    showOnHome: false
   };
 }
 
@@ -135,10 +143,16 @@ function numberOrNull(value: unknown) {
 
 function normalizeImages(value: unknown) {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => resolveImageUrl(item)).filter((item): item is string => Boolean(item));
+    return value
+      .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      .map((item) => resolveImageUrl(item))
+      .filter((item): item is string => Boolean(item));
   }
   if (typeof value === "string" && value.trim()) {
-    return value.split(/[\n,]/).map((item) => resolveImageUrl(item)).filter((item): item is string => Boolean(item));
+    return value
+      .split(/[\n,]/)
+      .map((item) => resolveImageUrl(item))
+      .filter((item): item is string => Boolean(item));
   }
   return [];
 }
@@ -149,6 +163,8 @@ function fallback(value: string | number | null | undefined, empty = "-") {
 
 function parseItem(raw: unknown): InventoryItem {
   const item = raw as Partial<InventoryItem> & Record<string, unknown>;
+  const mainImages = normalizeImages(item.mainImages);
+  const mainImage = resolveImageUrl(textOrNull(item.mainImage)) ?? mainImages[0] ?? null;
   return {
     id: typeof item.id === "string" ? item.id : "",
     name: typeof item.name === "string" ? item.name : "",
@@ -161,7 +177,8 @@ function parseItem(raw: unknown): InventoryItem {
     variety: textOrNull(item.variety),
     storageTemp: textOrNull(item.storageTemp),
     foodLicense: textOrNull(item.foodLicense),
-    mainImage: resolveImageUrl(textOrNull(item.mainImage)),
+    mainImage,
+    mainImages: mainImages.length > 0 ? mainImages : mainImage ? [mainImage] : [],
     detailImages: normalizeImages(item.detailImages),
     detailContent: textOrNull(item.detailContent),
     quantity: numberOrNull(item.quantity) ?? 0,
@@ -173,7 +190,8 @@ function parseItem(raw: unknown): InventoryItem {
     inboundDate: typeof item.inboundDate === "string" ? item.inboundDate : "",
     expiryDate: typeof item.expiryDate === "string" ? item.expiryDate : "",
     lowStockThreshold: numberOrNull(item.lowStockThreshold) ?? 0,
-    status: typeof item.status === "string" ? item.status : ""
+    status: typeof item.status === "string" ? item.status : "",
+    showOnHome: item.showOnHome === true
   };
 }
 
@@ -189,7 +207,8 @@ function toFormState(item: InventoryItem): FormState {
     variety: item.variety ?? "",
     storageTemp: item.storageTemp ?? "",
     foodLicense: item.foodLicense ?? "",
-    mainImage: item.mainImage ?? "",
+    mainImage: item.mainImage ?? item.mainImages[0] ?? "",
+    mainImages: item.mainImages,
     detailImages: item.detailImages,
     detailContent: item.detailContent ?? "",
     unit: item.unit,
@@ -200,7 +219,22 @@ function toFormState(item: InventoryItem): FormState {
     warehouseLocation: item.warehouseLocation,
     inboundDate: formatDate(item.inboundDate),
     expiryDate: formatDate(item.expiryDate),
-    lowStockThreshold: String(item.lowStockThreshold)
+    lowStockThreshold: String(item.lowStockThreshold),
+    showOnHome: item.showOnHome
+  };
+}
+
+function ensureCover(mainImage: string, mainImages: string[]) {
+  const unique = Array.from(new Set(mainImages.filter(Boolean)));
+  if (!mainImage) {
+    return {
+      mainImage: unique[0] ?? "",
+      mainImages: unique
+    };
+  }
+  return {
+    mainImage,
+    mainImages: unique.includes(mainImage) ? unique : [mainImage, ...unique]
   };
 }
 
@@ -217,17 +251,12 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function ImagePreview({ src, alt }: { src: string | null; alt: string }) {
+function SmallImage({ src, alt }: { src: string | null; alt: string }) {
   const imageUrl = resolveImageUrl(src);
   if (!imageUrl) {
     return <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">暂无图片</div>;
   }
-
-  return (
-    <a href={imageUrl} target="_blank" rel="noreferrer" className="block">
-      <img src={imageUrl} alt={alt} className="h-14 w-14 rounded-xl border border-slate-200 object-cover" />
-    </a>
-  );
+  return <img src={imageUrl} alt={alt} className="h-14 w-14 rounded-xl border border-slate-200 object-cover" />;
 }
 
 export function InventoryManagement() {
@@ -280,8 +309,12 @@ export function InventoryManagement() {
     setUploadingMain(true);
     try {
       const uploaded = await uploadFiles(files);
-      if (uploaded[0]) {
-        setFormState((current) => ({ ...current, mainImage: uploaded[0] }));
+      if (uploaded.length > 0) {
+        setFormState((current) => {
+          const nextMainImages = Array.from(new Set([...current.mainImages, ...uploaded]));
+          const nextMainImage = current.mainImage || uploaded[0];
+          return { ...current, ...ensureCover(nextMainImage, nextMainImages) };
+        });
       }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "主图上传失败");
@@ -316,10 +349,25 @@ export function InventoryManagement() {
     setIsModalOpen(true);
   }
 
+  function removeMainImage(image: string) {
+    setFormState((current) => {
+      const filtered = current.mainImages.filter((item) => item !== image);
+      return {
+        ...current,
+        mainImages: filtered,
+        mainImage: current.mainImage === image ? filtered[0] ?? "" : current.mainImage
+      };
+    });
+  }
+
+  function removeDetailImage(image: string) {
+    setFormState((current) => ({ ...current, detailImages: current.detailImages.filter((item) => item !== image) }));
+  }
+
   const rows = useMemo(
     () =>
       items.map((item) => [
-        <ImagePreview src={item.mainImage} alt={item.name} />,
+        <a href={item.mainImage ?? item.mainImages[0] ?? undefined} target="_blank" rel="noreferrer"><SmallImage src={item.mainImage ?? item.mainImages[0] ?? null} alt={item.name} /></a>,
         <div><div className="font-medium text-slate-900">{fallback(item.name)}</div><div className="text-xs text-slate-500">{fallback(item.category)}</div></div>,
         fallback(item.brand),
         fallback(item.packageTypeLabel),
@@ -328,6 +376,7 @@ export function InventoryManagement() {
         `${item.quantity} ${item.unit}`,
         item.netWeight == null ? "-" : `${item.netWeight}`,
         item.price == null ? "-" : currencyFormatter.format(item.price),
+        item.showOnHome ? "是" : "否",
         fallback(item.batchNo),
         fallback(formatDate(item.inboundDate)),
         fallback(formatDate(item.expiryDate)),
@@ -344,6 +393,7 @@ export function InventoryManagement() {
     setMessage(null);
     try {
       const isEditing = Boolean(formState.id);
+      const normalized = ensureCover(formState.mainImage, formState.mainImages);
       const payload = {
         ...(formState.id ? { id: formState.id } : {}),
         batchNo: formState.batchNo,
@@ -355,7 +405,8 @@ export function InventoryManagement() {
         variety: formState.variety || null,
         storageTemp: formState.storageTemp || null,
         foodLicense: formState.foodLicense || null,
-        mainImage: formState.mainImage || null,
+        mainImage: normalized.mainImage || null,
+        mainImages: normalized.mainImages,
         detailImages: formState.detailImages,
         detailContent: formState.detailContent || null,
         unit: formState.unit,
@@ -366,7 +417,8 @@ export function InventoryManagement() {
         warehouseLocation: formState.warehouseLocation,
         inboundDate: formState.inboundDate,
         expiryDate: formState.expiryDate,
-        lowStockThreshold: Number(formState.lowStockThreshold)
+        lowStockThreshold: Number(formState.lowStockThreshold),
+        showOnHome: formState.showOnHome
       };
       const response = await fetch(isEditing ? "/api/inventory" : "/api/inbound", {
         method: isEditing ? "PATCH" : "POST",
@@ -405,7 +457,7 @@ export function InventoryManagement() {
       >
         {message ? <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
         {error ? <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
-        {loading ? <div className="rounded-xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500">商品加载中...</div> : <DataTable columns={["主图", "商品", "品牌", "包装方式", "产地", "品种", "库存", "净重", "价格", "批次", "入库日期", "保质期", "状态", "操作"]} rows={rows} />}
+        {loading ? <div className="rounded-xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500">商品加载中...</div> : <DataTable columns={["主图", "商品", "品牌", "包装方式", "产地", "品种", "库存", "净重", "价格", "首页展示", "批次", "入库日期", "保质期", "状态", "操作"]} rows={rows} />}
       </SectionCard>
 
       {isModalOpen ? (
@@ -414,7 +466,7 @@ export function InventoryManagement() {
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">{formState.id ? "编辑商品" : "新增商品"}</h3>
-                <p className="mt-1 text-sm text-slate-500">图片上传到本地服务器后会立即生成站内路径并在下方预览。</p>
+                <p className="mt-1 text-sm text-slate-500">主图支持上传多张，点击某张图片可设为封面；勾选首页展示后，首页会使用这些图片展示水果。</p>
               </div>
               <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50">关闭</button>
             </div>
@@ -438,16 +490,22 @@ export function InventoryManagement() {
                 <label className="block"><FieldLabel label="保质期" required /><input value={formState.expiryDate} onChange={(event) => setFormState((current) => ({ ...current, expiryDate: event.target.value }))} type="date" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" /></label>
                 <label className="block"><FieldLabel label="生鲜储存温度" /><input value={formState.storageTemp} onChange={(event) => setFormState((current) => ({ ...current, storageTemp: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" placeholder="例如 0-4℃" /></label>
                 <label className="block xl:col-span-2"><FieldLabel label="食品生产许可证编号" /><input value={formState.foodLicense} onChange={(event) => setFormState((current) => ({ ...current, foodLicense: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" /></label>
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 xl:col-span-3"><input type="checkbox" checked={formState.showOnHome} onChange={(event) => setFormState((current) => ({ ...current, showOnHome: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand" />首页展示</label>
                 <div className="xl:col-span-3 grid gap-4 xl:grid-cols-2">
-                  <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4"><FieldLabel label="主图上传" /><input type="file" accept="image/*" onChange={(event) => void handleMainUpload(event.target.files)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" /><p className="mt-2 text-xs text-slate-500">{uploadingMain ? "主图上传中..." : formState.mainImage ? `当前主图：${formState.mainImage}` : "请选择一张主图"}</p></label>
-                  <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4"><FieldLabel label="商品详情图上传" /><input type="file" accept="image/*" multiple onChange={(event) => void handleDetailUpload(event.target.files)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" /><p className="mt-2 text-xs text-slate-500">{uploadingDetail ? "详情图上传中..." : "可一次上传多张详情图"}</p></label>
+                  <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4"><FieldLabel label="主图上传（可多张）" /><input type="file" accept="image/*" multiple onChange={(event) => void handleMainUpload(event.target.files)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" /><p className="mt-2 text-xs text-slate-500">{uploadingMain ? "主图上传中..." : formState.mainImages.length > 0 ? "点击下方缩略图可设置封面" : "可一次上传多张主图"}</p></label>
+                  <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4"><FieldLabel label="详情图上传" /><input type="file" accept="image/*" multiple onChange={(event) => void handleDetailUpload(event.target.files)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" /><p className="mt-2 text-xs text-slate-500">{uploadingDetail ? "详情图上传中..." : "可一次上传多张详情图"}</p></label>
                 </div>
                 <label className="block xl:col-span-3"><FieldLabel label="商品详情" /><textarea value={formState.detailContent} onChange={(event) => setFormState((current) => ({ ...current, detailContent: event.target.value }))} rows={5} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" placeholder="填写卖点、规格和储存说明" /></label>
               </div>
+
               <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <h4 className="text-sm font-semibold text-slate-900">详情预览</h4>
+                <h4 className="text-sm font-semibold text-slate-900">图片与详情预览</h4>
+                <div>
+                  <div className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">主图</div>
+                  {formState.mainImages.length > 0 ? <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">{formState.mainImages.map((image) => <div key={image} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2"><button type="button" onClick={() => setFormState((current) => ({ ...current, ...ensureCover(image, current.mainImages) }))} className="block w-full text-left"><img src={resolveImageUrl(image) || undefined} alt="主图" className="h-32 w-full rounded-xl object-cover" /></button><div className="mt-2 flex items-center justify-between gap-2"><span className={`rounded-full px-2 py-1 text-[11px] ${formState.mainImage === image ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{formState.mainImage === image ? "当前封面" : "设为封面"}</span><button type="button" onClick={() => removeMainImage(image)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-50">移除</button></div></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-400">暂无主图</div>}
+                </div>
                 <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3">{formState.mainImage ? <a href={resolveImageUrl(formState.mainImage) || undefined} target="_blank" rel="noreferrer"><img src={resolveImageUrl(formState.mainImage) || undefined} alt={formState.name || "主图"} className="h-48 w-full rounded-xl object-cover" /></a> : <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">暂无主图</div>}</div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3">{formState.mainImage ? <img src={resolveImageUrl(formState.mainImage) || undefined} alt={formState.name || "封面图"} className="h-48 w-full rounded-xl object-cover" /> : <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">暂无封面图</div>}</div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <DetailRow label="品牌" value={fallback(formState.brand)} />
                     <DetailRow label="包装方式" value={formState.packageType === "PACKAGED" ? "包装" : "散装"} />
@@ -458,14 +516,16 @@ export function InventoryManagement() {
                     <DetailRow label="单果规格" value={fallback(formState.unitSpec)} />
                     <DetailRow label="净重" value={fallback(formState.netWeight)} />
                     <DetailRow label="价格" value={formState.price ? currencyFormatter.format(Number(formState.price)) : "-"} />
-                    <DetailRow label="商品详情" value={fallback(formState.detailContent)} />
+                    <DetailRow label="首页展示" value={formState.showOnHome ? "是" : "否"} />
                   </div>
                 </div>
                 <div>
                   <div className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">详情图</div>
-                  {formState.detailImages.length > 0 ? <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">{formState.detailImages.map((image) => <div key={image} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2"><a href={resolveImageUrl(image) || undefined} target="_blank" rel="noreferrer"><img src={resolveImageUrl(image) || undefined} alt="详情图" className="h-32 w-full rounded-xl object-cover" /></a><div className="mt-2 flex items-center gap-2"><p className="flex-1 truncate text-xs text-slate-500">{image}</p><button type="button" onClick={() => setFormState((current) => ({ ...current, detailImages: current.detailImages.filter((item) => item !== image) }))} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-50">移除</button></div></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-400">暂无详情图</div>}
+                  {formState.detailImages.length > 0 ? <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">{formState.detailImages.map((image) => <div key={image} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2"><img src={resolveImageUrl(image) || undefined} alt="详情图" className="h-32 w-full rounded-xl object-cover" /><div className="mt-2 flex items-center justify-between gap-2"><p className="flex-1 truncate text-xs text-slate-500">{image}</p><button type="button" onClick={() => removeDetailImage(image)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-50">移除</button></div></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-400">暂无详情图</div>}
                 </div>
+                <DetailRow label="商品详情" value={fallback(formState.detailContent)} />
               </div>
+
               <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">取消</button>
                 <button type="submit" disabled={saving || uploadingMain || uploadingDetail} className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-slate-400">{saving ? "提交中..." : formState.id ? "保存修改" : "创建商品"}</button>

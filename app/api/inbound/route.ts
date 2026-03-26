@@ -17,6 +17,18 @@ import {
 
 const packageTypeValues = ["BULK", "PACKAGED"] as const;
 
+function normalizeMainImages(mainImage: string | null, mainImages: string[] | null) {
+  const normalized = Array.from(new Set([...(mainImages ?? []), ...(mainImage ? [mainImage] : [])].filter(Boolean)));
+  return {
+    mainImage: mainImage ?? normalized[0] ?? null,
+    mainImages: normalized
+  };
+}
+
+function parseShowOnHome(value: unknown) {
+  return value === true;
+}
+
 export async function POST(request: Request) {
   try {
     const session = await requireApiUser("inbound");
@@ -42,16 +54,21 @@ export async function POST(request: Request) {
     const storageTemp = assertOptionalString(body.storageTemp);
     const foodLicense = assertOptionalString(body.foodLicense);
     const mainImage = assertOptionalString(body.mainImage);
+    const mainImages = assertOptionalStringArray(body.mainImages, "mainImages");
     const detailImages = assertOptionalStringArray(body.detailImages, "detailImages");
-    const detailImagesInput = detailImages === null ? Prisma.JsonNull : detailImages;
     const detailContent = assertOptionalString(body.detailContent);
     const unitSpec = assertOptionalString(body.unitSpec);
     const netWeight = assertOptionalNumber(body.netWeight, "netWeight");
     const price = assertOptionalNumber(body.price, "price");
+    const showOnHome = parseShowOnHome(body.showOnHome);
 
     if (expiryDate <= inboundDate) {
       throw new ApiError(400, "expiryDate must be later than inboundDate");
     }
+
+    const normalizedImages = normalizeMainImages(mainImage, mainImages);
+    const detailImagesInput = detailImages === null ? Prisma.JsonNull : detailImages;
+    const mainImagesInput = normalizedImages.mainImages.length > 0 ? normalizedImages.mainImages : [];
 
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.fruitItem.findUnique({ where: { batchNo } });
@@ -69,12 +86,13 @@ export async function POST(request: Request) {
         ...(hasField("variety") ? { variety } : {}),
         ...(hasField("storageTemp") ? { storageTemp } : {}),
         ...(hasField("foodLicense") ? { foodLicense } : {}),
-        ...(hasField("mainImage") ? { mainImage } : {}),
+        ...(hasField("mainImage") || hasField("mainImages") ? { mainImage: normalizedImages.mainImage, mainImages: mainImagesInput } : {}),
         ...(hasField("detailImages") ? { detailImages: detailImagesInput } : {}),
         ...(hasField("detailContent") ? { detailContent } : {}),
         ...(hasField("unitSpec") ? { unitSpec } : {}),
         ...(hasField("netWeight") ? { netWeight } : {}),
-        ...(hasField("price") ? { price } : {})
+        ...(hasField("price") ? { price } : {}),
+        ...(hasField("showOnHome") ? { showOnHome } : {})
       };
 
       const fruitItem = existing
@@ -105,9 +123,11 @@ export async function POST(request: Request) {
               variety,
               storageTemp,
               foodLicense,
-              mainImage,
+              mainImage: normalizedImages.mainImage,
+              mainImages: mainImagesInput,
               detailImages: detailImagesInput,
               detailContent,
+              showOnHome,
               quantity,
               unit,
               unitSpec,

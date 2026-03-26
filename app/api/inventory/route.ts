@@ -18,6 +18,18 @@ export const dynamic = "force-dynamic";
 
 const packageTypeValues = ["BULK", "PACKAGED"] as const;
 
+function normalizeMainImages(mainImage: string | null, mainImages: string[] | null) {
+  const normalized = Array.from(new Set([...(mainImages ?? []), ...(mainImage ? [mainImage] : [])].filter(Boolean)));
+  return {
+    mainImage: mainImage ?? normalized[0] ?? null,
+    mainImages: normalized
+  };
+}
+
+function parseShowOnHome(value: unknown) {
+  return value === true;
+}
+
 export async function GET(request: Request) {
   try {
     await requireApiUser("inventory");
@@ -57,7 +69,7 @@ export async function GET(request: Request) {
 
     const items = await prisma.fruitItem.findMany({
       where,
-      orderBy: [{ expiryDate: "asc" }, { updatedAt: "desc" }]
+      orderBy: [{ showOnHome: "desc" }, { updatedAt: "desc" }]
     });
 
     return ok(items.map(serializeFruitItem));
@@ -88,11 +100,13 @@ export async function PATCH(request: Request) {
     const storageTemp = assertOptionalString(body.storageTemp);
     const foodLicense = assertOptionalString(body.foodLicense);
     const mainImage = assertOptionalString(body.mainImage);
+    const mainImages = assertOptionalStringArray(body.mainImages, "mainImages");
     const detailImages = assertOptionalStringArray(body.detailImages, "detailImages");
     const detailContent = assertOptionalString(body.detailContent);
     const unitSpec = assertOptionalString(body.unitSpec);
     const netWeight = assertOptionalNumber(body.netWeight, "netWeight");
     const price = assertOptionalNumber(body.price, "price");
+    const showOnHome = parseShowOnHome(body.showOnHome);
 
     if (expiryDate <= inboundDate) {
       throw new ApiError(400, "expiryDate must be later than inboundDate");
@@ -110,6 +124,7 @@ export async function PATCH(request: Request) {
       inboundDate
     });
 
+    const normalizedImages = normalizeMainImages(mainImage, mainImages);
     const updated = await prisma.fruitItem.update({
       where: { id },
       data: {
@@ -122,9 +137,11 @@ export async function PATCH(request: Request) {
         variety,
         storageTemp,
         foodLicense,
-        mainImage,
+        mainImage: normalizedImages.mainImage,
+        mainImages: normalizedImages.mainImages,
         detailImages: detailImages === null ? Prisma.JsonNull : detailImages,
         detailContent,
+        showOnHome,
         quantity,
         unit,
         unitSpec,

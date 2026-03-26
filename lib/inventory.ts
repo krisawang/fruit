@@ -23,11 +23,30 @@ function normalizeImagePath(value: string | null | undefined) {
     return trimmed;
   }
 
+  if (trimmed.startsWith("/api/uploads/")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("/uploads/")) {
+    return `/api${trimmed}`;
+  }
+
   if (trimmed.startsWith("/")) {
     return trimmed;
   }
 
-  return `/${trimmed.replace(/^\.?\/+/, "")}`;
+  return `/api/uploads/${trimmed.replace(/^\.?\/+/, "")}`;
+}
+
+function toStringArray(value: Prisma.JsonValue | null | undefined) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => normalizeImagePath(item))
+    .filter((item): item is string => Boolean(item));
 }
 
 export function startOfToday() {
@@ -70,17 +89,6 @@ function toOptionalNumber(value: Prisma.Decimal | number | string | null | undef
   }
 
   return toNumber(value);
-}
-
-function toDetailImages(value: Prisma.JsonValue | null | undefined) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => normalizeImagePath(item))
-    .filter((item): item is string => Boolean(item));
 }
 
 export function computeInventoryStatus(params: {
@@ -133,15 +141,19 @@ export function serializeFruitItem(item: {
   storageTemp?: string | null;
   foodLicense?: string | null;
   mainImage?: string | null;
+  mainImages?: Prisma.JsonValue | null;
   detailImages?: Prisma.JsonValue | null;
   detailContent?: string | null;
   unitSpec?: string | null;
   netWeight?: Prisma.Decimal | number | null;
   price?: Prisma.Decimal | number | null;
+  showOnHome?: boolean | null;
 }) {
   const quantity = toNumber(item.quantity);
   const lowStockThreshold = toNumber(item.lowStockThreshold);
   const packageType = item.packageType ?? "BULK";
+  const mainImages = toStringArray(item.mainImages);
+  const mainImage = normalizeImagePath(item.mainImage) ?? mainImages[0] ?? null;
 
   return {
     ...item,
@@ -150,12 +162,14 @@ export function serializeFruitItem(item: {
     variety: item.variety ?? null,
     storageTemp: item.storageTemp ?? null,
     foodLicense: item.foodLicense ?? null,
-    mainImage: normalizeImagePath(item.mainImage),
-    detailImages: toDetailImages(item.detailImages),
+    mainImage,
+    mainImages: mainImages.length > 0 ? mainImages : mainImage ? [mainImage] : [],
+    detailImages: toStringArray(item.detailImages),
     detailContent: item.detailContent ?? null,
     unitSpec: item.unitSpec ?? null,
     netWeight: toOptionalNumber(item.netWeight),
     price: toOptionalNumber(item.price),
+    showOnHome: Boolean(item.showOnHome),
     quantity,
     lowStockThreshold,
     packageTypeLabel: packageTypeLabels[packageType],
