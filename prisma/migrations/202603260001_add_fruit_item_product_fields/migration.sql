@@ -1,4 +1,4 @@
-﻿CREATE TYPE "PackageType" AS ENUM ('BULK', 'PACKAGED');
+CREATE TYPE "PackageType" AS ENUM ('BULK', 'PACKAGED');
 
 ALTER TABLE "FruitItem"
   ADD COLUMN "brand" TEXT,
